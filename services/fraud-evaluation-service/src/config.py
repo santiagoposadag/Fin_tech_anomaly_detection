@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     """
 
     # MongoDB
-    mongodb_url: str = "mongodb://admin:fraud2026@localhost:27017"
+    # ⚠️ IMPORTANTE: No usar valores por defecto en producción
+    # Configurar mediante variables de entorno o secrets manager
+    mongodb_url: str
     mongodb_database: str = "fraud_detection"
 
     # Redis
@@ -29,7 +31,9 @@ class Settings(BaseSettings):
     redis_ttl: int = 86400  # 24 horas
 
     # RabbitMQ
-    rabbitmq_url: str = "amqp://fraud:fraud2026@localhost:5672"
+    # ⚠️ IMPORTANTE: No usar valores por defecto en producción
+    # Configurar mediante variables de entorno o secrets manager
+    rabbitmq_url: str
     rabbitmq_transactions_queue: str = "transactions"
     rabbitmq_manual_review_queue: str = "manual_review"
 
@@ -42,16 +46,20 @@ class Settings(BaseSettings):
     location_radius_km: float = 100.0
 
     # JWT Authentication
-    jwt_secret_key: str = "your-secret-key-change-in-production-123456789"
+    # ⚠️ IMPORTANTE: No usar valores por defecto en producción
+    # Configurar mediante variables de entorno o secrets manager
+    jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
-    
-    # Email Configuration (Gmail SMTP)
+
+    # Email Configuration (SMTP)
+    # ⚠️ IMPORTANTE: No usar valores por defecto en producción
+    # Configurar mediante variables de entorno o secrets manager
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_username: str = "distribuidoraperrosgatos@gmail.com"
-    smtp_password: str = "zwnd hwfd oirw yeje"
-    from_email: str = "distribuidoraperrosgatos@gmail.com"
+    smtp_username: str
+    smtp_password: str
+    from_email: str = "noreply@example.com"
     base_url: str = "http://localhost:3000"
 
     class Config:

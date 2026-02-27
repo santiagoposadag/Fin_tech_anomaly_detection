@@ -16,6 +16,7 @@ from typing import Optional, List, Any
 from datetime import datetime
 import uuid
 
+from pymongo.errors import DuplicateKeyError
 from src.domain.models import Card, CardStatus
 from src.application.ports.card_repository import CardRepository
 
@@ -48,9 +49,19 @@ class MongoCardRepository(CardRepository):
         self._ensure_indexes()
     
     def _ensure_indexes(self):
-        """Create required database indexes for efficient queries."""
-        # Note: In production, indexes should be created via migration scripts
-        # This is for convenience in development/testing
+        """Create required database indexes for efficient queries.
+
+        Required index (run once via migration or startup):
+            collection.create_index(
+                [("user_id", 1), ("last_four_digits", 1)],
+                unique=True,
+                partialFilterExpression={"status": "ACTIVE"},
+                name="unique_active_card_per_user"
+            )
+        This unique partial index enforces at database level that a user
+        cannot have two ACTIVE cards with the same last 4 digits, eliminating
+        the race condition in AddCardUseCase.
+        """
         pass
     
     async def save(self, card: Card) -> Card:
@@ -79,6 +90,7 @@ class MongoCardRepository(CardRepository):
         document = {
             '_id': card_id,
             'card_number': card.card_number,
+            'last_four_digits': card.card_number[-4:] if card.card_number else None,
             'card_holder_name': card.card_holder_name,
             'expiry_date': card.expiry_date,
             'card_type': card.card_type,
@@ -88,13 +100,25 @@ class MongoCardRepository(CardRepository):
             'created_at': card.created_at,
             'updated_at': card.updated_at,
         }
-        
-        # Insert or update (upsert)
-        await self.collection.update_one(
-            {'_id': card_id},
-            {'$set': document},
-            upsert=True
-        )
+
+        if not card.card_id:
+            # New card: use insert_one so MongoDB's unique index triggers
+            # DuplicateKeyError on concurrent inserts with the same
+            # (user_id, last_four_digits) combination.
+            try:
+                await self.collection.insert_one(document)
+            except DuplicateKeyError:
+                last_four = document.get('last_four_digits', '????')
+                raise ValueError(
+                    f"Card with last 4 digits {last_four} already linked to your account"
+                )
+        else:
+            # Existing card update (e.g., status change by RemoveCardUseCase)
+            await self.collection.update_one(
+                {'_id': card_id},
+                {'$set': document},
+                upsert=True
+            )
         
         # Return Card entity with card_id populated
         return Card(
@@ -176,22 +200,16 @@ class MongoCardRepository(CardRepository):
         - Compares last 4 digits of card number (extracted at application level)
         - Query is efficient with (user_id, status) compound index
         """
-        # In production, last_four would be stored as separate field for security
-        # For now, we'll query by checking card_number ending
-        # This is simplified; real implementation would use stored last_four field
-        
-        cursor = self.collection.find({
+        doc = await self.collection.find_one({
             'user_id': user_id,
-            'status': CardStatus.ACTIVE.value
+            'last_four_digits': last_four_digits,
+            'status': CardStatus.ACTIVE.value,
         })
-        
-        async for doc in cursor:
-            # Extract last 4 from card number
-            card_number = doc.get('card_number', '')
-            if card_number.endswith(last_four_digits):
-                return self._document_to_card(doc)
-        
-        return None
+
+        if not doc:
+            return None
+
+        return self._document_to_card(doc)
     
     async def count_user_cards(self, user_id: str) -> int:
         """

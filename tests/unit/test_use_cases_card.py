@@ -28,7 +28,7 @@ def valid_card_data():
     return {
         'card_number': '4532015112830366',
         'card_holder_name': 'John Doe',
-        'expiry_date': '12/25',
+        'expiry_date': '12/27',
         'card_type': 'DEBIT',
         'user_id': 'user_12345',
         'nickname': 'Main Card',
@@ -85,7 +85,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_happy_path(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should successfully add a new card when all validation passes"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         from src.domain.models import Card
         
         use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
@@ -109,7 +109,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_duplicate_prevention(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should reject card if same last 4 digits already exist for user"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         # Mock that card with same last 4 digits exists
         mock_card_repository.find_by_user_and_last_four.return_value = Mock()  # Card exists
@@ -126,7 +126,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_max_cards_limit_exceeded(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should reject if user already has 10 cards (max limit)"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         # Mock that user has 10 cards
         mock_card_repository.count_user_cards.return_value = 10
@@ -143,7 +143,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_validates_card_number(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should reject invalid card number format"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
         
@@ -157,7 +157,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_validates_expiry_date(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should reject invalid expiry date format"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
         
@@ -171,7 +171,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_validates_cardholder_name(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should reject invalid card holder name"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
         
@@ -185,7 +185,7 @@ class TestAddCardUseCase:
     @pytest.mark.asyncio
     async def test_add_card_publishes_audit_event(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should publish audit event when card is added"""
-        from src.application.use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
         
         use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
         
@@ -201,6 +201,28 @@ class TestAddCardUseCase:
         assert event.get('user_id') == valid_card_data['user_id']
         assert event.get('action') == 'CARD_ADDED'
 
+    @pytest.mark.asyncio
+    async def test_add_card_handles_duplicate_key_error_from_repository(
+        self, valid_card_data, mock_card_repository, mock_audit_publisher
+    ):
+        """Should propagate ValueError when the repository detects a concurrent duplicate insert"""
+        from src.application.card_use_cases.add_card import AddCardUseCase
+
+        # Simulate: duplicate pre-check passes (race condition), but the repository
+        # re-raises MongoDB's DuplicateKeyError as ValueError (infrastructure-level handling).
+        mock_card_repository.find_by_user_and_last_four = AsyncMock(return_value=None)
+        mock_card_repository.count_user_cards = AsyncMock(return_value=0)
+        mock_card_repository.save = AsyncMock(
+            side_effect=ValueError(
+                "Card with last 4 digits 0366 already linked to your account"
+            )
+        )
+
+        use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)
+
+        with pytest.raises(ValueError, match="already linked to your account"):
+            await use_case.execute(valid_card_data)
+
 
 # ============================================================================
 # Test Suite 2: RemoveCardUseCase (Soft delete card)
@@ -212,14 +234,14 @@ class TestRemoveCardUseCase:
     @pytest.mark.asyncio
     async def test_remove_card_happy_path(self, mock_card_repository, mock_audit_publisher):
         """Should successfully soft-delete a card"""
-        from src.application.use_cases.remove_card import RemoveCardUseCase
+        from src.application.card_use_cases.remove_card import RemoveCardUseCase
         from src.domain.models import Card
         
         # Mock existing card
         existing_card = Card(
             card_number='4532015112830366',
             card_holder_name='John Doe',
-            expiry_date='12/25',
+            expiry_date='12/27',
             card_type='DEBIT',
             user_id='user_12345',
             card_id='card_123',
@@ -239,7 +261,7 @@ class TestRemoveCardUseCase:
     @pytest.mark.asyncio
     async def test_remove_card_not_found(self, mock_card_repository, mock_audit_publisher):
         """Should raise error if card doesn't exist"""
-        from src.application.use_cases.remove_card import RemoveCardUseCase
+        from src.application.card_use_cases.remove_card import RemoveCardUseCase
         
         # Mock card not found
         mock_card_repository.find_by_id.return_value = None
@@ -253,14 +275,14 @@ class TestRemoveCardUseCase:
     @pytest.mark.asyncio
     async def test_remove_card_unauthorized_access(self, mock_card_repository, mock_audit_publisher):
         """Should reject if user_id doesn't match card owner"""
-        from src.application.use_cases.remove_card import RemoveCardUseCase
+        from src.application.card_use_cases.remove_card import RemoveCardUseCase
         from src.domain.models import Card
         
         # Mock card owned by different user
         existing_card = Card(
             card_number='4532015112830366',
             card_holder_name='John Doe',
-            expiry_date='12/25',
+            expiry_date='12/27',
             card_type='DEBIT',
             user_id='other_user',  # Different owner
             card_id='card_123',
@@ -279,13 +301,13 @@ class TestRemoveCardUseCase:
     @pytest.mark.asyncio
     async def test_remove_card_publishes_audit_event(self, mock_card_repository, mock_audit_publisher):
         """Should publish audit event when card is removed"""
-        from src.application.use_cases.remove_card import RemoveCardUseCase
+        from src.application.card_use_cases.remove_card import RemoveCardUseCase
         from src.domain.models import Card
         
         existing_card = Card(
             card_number='4532015112830366',
             card_holder_name='John Doe',
-            expiry_date='12/25',
+            expiry_date='12/27',
             card_type='DEBIT',
             user_id='user_12345',
             card_id='card_123',
@@ -314,7 +336,7 @@ class TestListUserCardsUseCase:
     @pytest.mark.asyncio
     async def test_list_user_cards_happy_path(self, mock_card_repository):
         """Should return all active cards for user"""
-        from src.application.use_cases.list_user_cards import ListUserCardsUseCase
+        from src.application.card_use_cases.list_user_cards import ListUserCardsUseCase
         from src.domain.models import Card
         
         # Mock cards
@@ -322,7 +344,7 @@ class TestListUserCardsUseCase:
             Card(
                 card_number='4532015112830366',
                 card_holder_name='John Doe',
-                expiry_date='12/25',
+                expiry_date='12/27',
                 card_type='DEBIT',
                 user_id='user_12345',
                 card_id='card_1',
@@ -353,7 +375,7 @@ class TestListUserCardsUseCase:
     @pytest.mark.asyncio
     async def test_list_user_cards_empty_list(self, mock_card_repository):
         """Should return empty list if user has no cards"""
-        from src.application.use_cases.list_user_cards import ListUserCardsUseCase
+        from src.application.card_use_cases.list_user_cards import ListUserCardsUseCase
         
         mock_card_repository.find_by_user_id.return_value = []
         
@@ -368,14 +390,14 @@ class TestListUserCardsUseCase:
     @pytest.mark.asyncio
     async def test_list_user_cards_masks_card_numbers(self, mock_card_repository):
         """Should mask card numbers in response for security"""
-        from src.application.use_cases.list_user_cards import ListUserCardsUseCase
+        from src.application.card_use_cases.list_user_cards import ListUserCardsUseCase
         from src.domain.models import Card
         
         cards = [
             Card(
                 card_number='4532015112830366',
                 card_holder_name='John Doe',
-                expiry_date='12/25',
+                expiry_date='12/27',
                 card_type='DEBIT',
                 user_id='user_12345',
                 card_id='card_1',
@@ -403,13 +425,13 @@ class TestGetCardDetailsUseCase:
     @pytest.mark.asyncio
     async def test_get_card_details_happy_path(self, mock_card_repository):
         """Should return card details for authorized user"""
-        from src.application.use_cases.get_card_details import GetCardDetailsUseCase
+        from src.application.card_use_cases.get_card_details import GetCardDetailsUseCase
         from src.domain.models import Card
         
         card = Card(
             card_number='4532015112830366',
             card_holder_name='John Doe',
-            expiry_date='12/25',
+            expiry_date='12/27',
             card_type='DEBIT',
             user_id='user_12345',
             card_id='card_123',
@@ -428,7 +450,7 @@ class TestGetCardDetailsUseCase:
     @pytest.mark.asyncio
     async def test_get_card_details_card_not_found(self, mock_card_repository):
         """Should raise error if card doesn't exist"""
-        from src.application.use_cases.get_card_details import GetCardDetailsUseCase
+        from src.application.card_use_cases.get_card_details import GetCardDetailsUseCase
         
         mock_card_repository.find_by_id.return_value = None
         
@@ -441,13 +463,13 @@ class TestGetCardDetailsUseCase:
     @pytest.mark.asyncio
     async def test_get_card_details_unauthorized_access(self, mock_card_repository):
         """Should reject if user_id doesn't match card owner"""
-        from src.application.use_cases.get_card_details import GetCardDetailsUseCase
+        from src.application.card_use_cases.get_card_details import GetCardDetailsUseCase
         from src.domain.models import Card
         
         card = Card(
             card_number='4532015112830366',
             card_holder_name='John Doe',
-            expiry_date='12/25',
+            expiry_date='12/27',
             card_type='DEBIT',
             user_id='other_user',  # Different owner
             card_id='card_123',
@@ -471,8 +493,8 @@ class TestCardUseCasesIntegration:
     @pytest.mark.asyncio
     async def test_add_then_list_cards(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should be able to add a card and then list it"""
-        from src.application.use_cases.add_card import AddCardUseCase
-        from src.application.use_cases.list_user_cards import ListUserCardsUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.list_user_cards import ListUserCardsUseCase
         from src.domain.models import Card
         
         # Setup: Add card
@@ -493,8 +515,8 @@ class TestCardUseCasesIntegration:
     @pytest.mark.asyncio
     async def test_add_then_remove_card(self, valid_card_data, mock_card_repository, mock_audit_publisher):
         """Should be able to add a card and then remove it"""
-        from src.application.use_cases.add_card import AddCardUseCase
-        from src.application.use_cases.remove_card import RemoveCardUseCase
+        from src.application.card_use_cases.add_card import AddCardUseCase
+        from src.application.card_use_cases.remove_card import RemoveCardUseCase
         
         # Setup: Add card
         add_use_case = AddCardUseCase(mock_card_repository, mock_audit_publisher)

@@ -29,7 +29,7 @@ def card_data():
     return {
         'card_number': '4532015112830366',
         'card_holder_name': 'John Doe',
-        'expiry_date': '12/25',
+        'expiry_date': '12/27',
         'card_type': 'DEBIT',
         'user_id': 'user_12345',
         'card_id': 'card_mongo_001',
@@ -181,7 +181,7 @@ class TestMongoCardRepositoryFind:
                 'user_id': 'user_12345',
                 'status': 'ACTIVE',
                 'card_holder_name': 'John',
-                'expiry_date': '12/25',
+                'expiry_date': '12/27',
                 'card_type': 'DEBIT',
                 'created_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat(),

@@ -27,7 +27,7 @@ def valid_card_data():
     return {
         'card_number': '4532015112830366',  # Valid 16-digit card
         'card_holder_name': 'John Doe',
-        'expiry_date': '12/25',  # MM/YY format
+        'expiry_date': '12/27',  # MM/YY format
         'card_type': 'DEBIT',
         'nickname': 'Main Debit Card',
         'user_id': 'user_12345',
@@ -63,7 +63,7 @@ class TestCardEntity:
         
         assert card.card_number == '4532015112830366'
         assert card.card_holder_name == 'John Doe'
-        assert card.expiry_date == '12/25'
+        assert card.expiry_date == '12/27'
         assert card.card_type == 'DEBIT'
         assert card.nickname == 'Main Debit Card'
         assert card.user_id == 'user_12345'
@@ -185,7 +185,7 @@ class TestExpiryDateValidator:
             validate_expiry_date
         )
         
-        result = validate_expiry_date('12/25')
+        result = validate_expiry_date('12/27')
         assert result is True
 
     def test_validate_expiry_date_valid_month_range(self):
@@ -193,9 +193,9 @@ class TestExpiryDateValidator:
         from src.domain.validation.card_validators import (
             validate_expiry_date
         )
-        
+
         for month in ['01', '06', '12']:
-            result = validate_expiry_date(f'{month}/25')
+            result = validate_expiry_date(f'{month}/27')
             assert result is True
 
     def test_validate_expiry_date_rejects_invalid_month_00(self):
@@ -239,8 +239,50 @@ class TestExpiryDateValidator:
         from src.domain.validation.card_validators import (
             validate_expiry_date
         )
-        
+
         result = validate_expiry_date('06/27')
+        assert result is True
+
+    def test_validate_expiry_date_rejects_past_year(self):
+        """Should reject a card expired in a previous year"""
+        from src.domain.validation.card_validators import validate_expiry_date
+
+        with pytest.raises(ValueError, match="expired"):
+            validate_expiry_date('01/20')  # January 2020 — always in the past
+
+    def test_validate_expiry_date_rejects_past_month_current_year(self):
+        """Should reject a card whose expiry month has already passed this year"""
+        from src.domain.validation.card_validators import validate_expiry_date
+        from datetime import date
+
+        today = date.today()
+        # Build a date one month before today
+        if today.month == 1:
+            past_month = 12
+            past_year = (today.year - 1) % 100
+        else:
+            past_month = today.month - 1
+            past_year = today.year % 100
+        expiry = f"{past_month:02d}/{past_year:02d}"
+
+        with pytest.raises(ValueError, match="expired"):
+            validate_expiry_date(expiry)
+
+    def test_validate_expiry_date_accepts_current_month(self):
+        """Should accept a card expiring in the current month"""
+        from src.domain.validation.card_validators import validate_expiry_date
+        from datetime import date
+
+        today = date.today()
+        expiry = f"{today.month:02d}/{today.year % 100:02d}"
+        result = validate_expiry_date(expiry)
+        assert result is True
+
+    def test_validate_expiry_date_accepts_future_date(self):
+        """Should accept a card expiring well in the future"""
+        from src.domain.validation.card_validators import validate_expiry_date
+
+        result = validate_expiry_date('12/99')  # December 2099 — always in the future
         assert result is True
 
 

@@ -3,9 +3,12 @@ DeviceValidationStrategy - Valida si el dispositivo ha sido usado previamente.
 HU-004: Como sistema, quiero validar si el device_id del usuario ha sido usado
 previamente para detectar actividad sospechosa.
 """
+import logging
 from typing import Dict, Any, Optional
 from .base import FraudStrategy
 from src.domain.models import Transaction, RiskLevel, Location
+
+logger = logging.getLogger(__name__)
 
 
 class DeviceValidationStrategy(FraudStrategy):
@@ -42,9 +45,6 @@ class DeviceValidationStrategy(FraudStrategy):
             user_id = transaction.user_id
             device_id = transaction.device_id
             
-            # DEBUG: Imprimir lo que recibimos
-            print(f"[DeviceValidation] user_id={user_id}, device_id={device_id}, type={type(device_id)}")
-            
             if not device_id:
                 return {
                     "risk_level": RiskLevel.MEDIUM_RISK,
@@ -79,7 +79,7 @@ class DeviceValidationStrategy(FraudStrategy):
                 
         except Exception as e:
             # En caso de error con Redis, retornar riesgo bajo para no bloquear
-            print(f"Error en DeviceValidationStrategy: {e}")
+            logger.error(f"Error en DeviceValidationStrategy: {e}")
             return {
                 "risk_level": RiskLevel.LOW_RISK,
                 "reasons": ["Error en validación de dispositivo"],
