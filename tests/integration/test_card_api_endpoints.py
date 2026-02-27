@@ -31,7 +31,7 @@ def valid_add_card_request():
     return {
         'card_number': '4532015112830366',
         'card_holder_name': 'John Doe',
-        'expiry_date': '12/25',
+        'expiry_date': '12/27',
         'card_type': 'DEBIT',
         'nickname': 'Main Card',
     }
@@ -44,7 +44,7 @@ def card_response():
         'card_id': 'card_001',
         'card_number': '****0366',  # Masked
         'card_holder_name': 'John Doe',
-        'expiry_date': '12/25',
+        'expiry_date': '12/27',
         'card_type': 'DEBIT',
         'nickname': 'Main Card',
         'status': 'ACTIVE',
@@ -93,7 +93,7 @@ class TestAddCardEndpoint:
         invalid_request = {
             'card_number': '1234',  # Too short
             'card_holder_name': 'John Doe',
-            'expiry_date': '12/25',
+            'expiry_date': '12/27',
             'card_type': 'DEBIT',
         }
         # Expected: 400 with validation error details

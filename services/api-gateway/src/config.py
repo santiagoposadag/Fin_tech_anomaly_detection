@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     amount_threshold: float = 1500.0
     location_radius_km: float = 100.0
 
+    # CORS - comma-separated list of allowed origins
+    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
+
+    # Frontend URLs
+    admin_dashboard_url: str = "http://localhost:3001"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

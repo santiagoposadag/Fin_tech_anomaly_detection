@@ -1,1 +1,1 @@
-"""API Gateway routes package."""
+"""API Gateway routes package for card management."""

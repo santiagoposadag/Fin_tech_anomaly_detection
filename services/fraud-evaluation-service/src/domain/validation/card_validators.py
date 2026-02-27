@@ -26,6 +26,7 @@ Post-MVP Enhancements:
 - Speed of transaction checks (velocity limits)
 """
 import re
+from datetime import date
 from typing import Optional
 
 
@@ -120,10 +121,18 @@ def validate_expiry_date(expiry_date: str) -> bool:
 
     month, year = expiry_date.split('/')
     month_int = int(month)
+    year_int = int(year)
 
     # Validate month range (01-12)
     if not (1 <= month_int <= 12):
         raise ValueError("Month must be between 01 and 12")
+
+    # Validate card has not expired
+    today = date.today()
+    current_year = today.year % 100  # 2-digit year
+    current_month = today.month
+    if year_int < current_year or (year_int == current_year and month_int < current_month):
+        raise ValueError("Card has expired")
 
     return True
 

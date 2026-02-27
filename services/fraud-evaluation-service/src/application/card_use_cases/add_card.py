@@ -102,6 +102,9 @@ class AddCardUseCase:
         )
 
         # 5. Persist to repository
+        # The repository raises ValueError on duplicate key (race condition safety):
+        # two concurrent requests may both pass the duplicate check above, but the
+        # repository catches MongoDB's DuplicateKeyError and re-raises as ValueError.
         saved_card = await self.repository.save(card)
 
         # 6. Publish audit event

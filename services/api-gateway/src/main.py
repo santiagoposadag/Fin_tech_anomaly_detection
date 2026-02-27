@@ -11,7 +11,7 @@ y el código real usa las conexiones reales. Es más trabajo inicial pero vale l
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from decimal import Decimal
-from api_gateway.routes import router
+from api_gateway.main_routes import router
 from src.adapters import (
     MongoDBAdapter,
     RedisAdapter,
@@ -52,9 +52,10 @@ app = FastAPI(
 )
 
 # CORS middleware
+_allowed_origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar orígenes permitidos
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -189,7 +190,7 @@ def get_register_admin_use_case():
         admin_repository=get_admin_repository(),
         password_service=get_password_service(),
         email_service=get_email_service(),
-        base_url="http://localhost:3001"  # URL del admin dashboard
+        base_url=settings.admin_dashboard_url
     )
 
 
@@ -218,7 +219,7 @@ def get_current_admin_use_case():
 
 
 # Registrar rutas con dependency injection
-from api_gateway.routes import router, api_v1_router, configure_dependencies
+from api_gateway.main_routes import router, api_v1_router, configure_dependencies
 from api_gateway.auth_routes import auth_router, configure_auth_dependencies
 from api_gateway.admin_auth_routes import admin_auth_router, configure_admin_auth_dependencies
 

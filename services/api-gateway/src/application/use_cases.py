@@ -12,6 +12,7 @@ La IA sugirió un método genérico "process_transaction" que hacía todo.
 Lo refactoricé en dos casos de uso separados (EvaluateTransaction y ReviewTransaction)
 para cumplir con Single Responsibility y Command Query Separation (CQS).
 """
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Dict, Any, Optional
@@ -22,6 +23,8 @@ from src.application.interfaces import (
     MessagePublisher,
     CacheService,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluateTransactionUseCase:
@@ -81,9 +84,7 @@ class EvaluateTransactionUseCase:
         """
         # 1. Convertir datos a entidad Transaction
         transaction = self._build_transaction_from_data(transaction_data)
-        
-        # DEBUG
-        print(f"[USE_CASE] Transaction created - device_id: {transaction.device_id}")
+        logger.debug("[USE_CASE] Transaction created - device_id: %s", transaction.device_id)
 
         # 2. Obtener ubicación histórica del usuario (si existe)
         historical_location = await self._get_historical_location(transaction.user_id)
@@ -165,8 +166,7 @@ class EvaluateTransactionUseCase:
             else:
                 timestamp = datetime.now()
 
-            # DEBUG
-            print(f"[USE_CASE] Building Transaction - device_id from data: {data.get('device_id')}")
+            logger.debug("[USE_CASE] Building Transaction - device_id from data: %s", data.get('device_id'))
 
             return Transaction(
                 id=data["id"],

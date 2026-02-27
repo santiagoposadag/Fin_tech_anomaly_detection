@@ -270,7 +270,6 @@ class EmailService:
             message.add_alternative(html_body, subtype='html')
             
             logger.info(f"Attempting to send verification email to {to_email}")
-            logger.info(f"SMTP Config: {self.smtp_host}:{self.smtp_port}, User: {self.smtp_username}")
             
             await aiosmtplib.send(
                 message,

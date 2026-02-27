@@ -8,11 +8,14 @@ Nota (María Gutiérrez):
 La IA sugirió poner toda la lógica en las rutas. La moví a los casos de uso
 para cumplir con Separation of Concerns - las rutas solo manejan HTTP.
 """
+import logging
 from fastapi import APIRouter, HTTPException, Header, Query, status
 from typing import List, Optional, Callable, Any, Dict
 from pydantic import BaseModel, Field
 from decimal import Decimal
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 
 def _iso_utc(dt: Optional[datetime]) -> Optional[str]:
@@ -581,8 +584,7 @@ async def validate_transaction_sync(transaction: TransactionValidateRequest):
     Retorna resultado inmediato con status, riskScore y violations.
     """
     try:
-        # DEBUG: Ver qué llega
-        print(f"[ROUTE] Received - userId: {transaction.userId}, deviceId: {transaction.deviceId}")
+        logger.debug("[ROUTE] Received - userId: %s, deviceId: %s", transaction.userId, transaction.deviceId)
         
         # Instanciar dependencias
         repository = _repository_factory()
@@ -615,8 +617,7 @@ async def validate_transaction_sync(transaction: TransactionValidateRequest):
             "description": getattr(transaction, 'description', None)
         }
         
-        # DEBUG: Ver payload completo
-        print(f"[ROUTE] transaction_data: device_id={transaction_data.get('device_id')}")
+        logger.debug("[ROUTE] transaction_data: device_id=%s", transaction_data.get('device_id'))
         
         # Evaluar transacción
         result = await evaluate_use_case.execute(transaction_data)
