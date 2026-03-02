@@ -117,13 +117,15 @@ class EmailService:
         smtp_port: int,
         smtp_username: str,
         smtp_password: str,
-        from_email: str
+        from_email: str,
+        use_tls: bool = True
     ):
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
         self.smtp_username = smtp_username
         self.smtp_password = smtp_password
         self.from_email = from_email
+        self.use_tls = use_tls
     
     async def send_verification_email(
         self,
@@ -275,9 +277,9 @@ class EmailService:
                 message,
                 hostname=self.smtp_host,
                 port=self.smtp_port,
-                username=self.smtp_username,
-                password=self.smtp_password,
-                start_tls=True
+                username=self.smtp_username or None,
+                password=self.smtp_password or None,
+                start_tls=self.use_tls
             )
             
             logger.info(f"Verification email sent successfully to {to_email}")
@@ -467,9 +469,9 @@ class EmailService:
                 message,
                 hostname=self.smtp_host,
                 port=self.smtp_port,
-                username=self.smtp_username,
-                password=self.smtp_password,
-                start_tls=True
+                username=self.smtp_username or None,
+                password=self.smtp_password or None,
+                start_tls=self.use_tls
             )
             
             logger.info(f"Welcome email sent successfully to {to_email}")

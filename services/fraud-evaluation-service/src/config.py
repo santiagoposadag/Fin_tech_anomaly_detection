@@ -57,8 +57,9 @@ class Settings(BaseSettings):
     # Configurar mediante variables de entorno o secrets manager
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_username: str
-    smtp_password: str
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
     from_email: str = "noreply@example.com"
     base_url: str = "http://localhost:3000"
 

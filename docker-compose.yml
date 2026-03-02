@@ -41,6 +41,15 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fraud-mailpit
+    ports:
+      - "1025:1025"   # SMTP — receives emails from the app
+      - "8025:8025"   # Web UI — read captured emails at http://localhost:8025
+    networks:
+      - fraud-network
+
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: fraud-rabbitmq

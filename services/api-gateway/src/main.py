@@ -139,7 +139,8 @@ def get_email_service():
         smtp_port=settings.smtp_port,
         smtp_username=settings.smtp_username,
         smtp_password=settings.smtp_password,
-        from_email=settings.from_email
+        from_email=settings.from_email,
+        use_tls=settings.smtp_use_tls
     )
 
 
